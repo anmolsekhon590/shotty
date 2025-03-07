@@ -32,26 +32,20 @@ fn main() {
         .spawn()
         .expect("Failed to execute grim");
 
-    if let Some(output) = grim_process.stdout.take() {
-        let wlcopy_status = Command::new("wl-copy")
-            .stdin(output)
-            .status()
-            .expect("Failed to execute wl-copy");
-
-        if !wlcopy_status.success() {
-            eprintln!("Failed to copy screenshot to clipboard.");
-        }
-    }
-
     let grim_status = grim_process
         .wait()
         .expect("Failed to wait for grim process");
+
     if !grim_status.success() {
         eprintln!("Grim failed to capture screenshot.");
         return;
     }
 
+<<<<<<< Updated upstream
     // Save screenshot to disk always
+=======
+    // Capture screenshot and save it
+>>>>>>> Stashed changes
     let save_status = Command::new("grim")
         .args(["-g", selection.trim(), &filename])
         .status()
@@ -59,5 +53,17 @@ fn main() {
 
     if !save_status.success() {
         eprintln!("Failed to save screenshot to file.");
+        return;
+    }
+
+    // Copy saved screenshot to clipboard
+    let wlcopy_status = Command::new("wl-copy")
+        .arg("--type=image/png")
+        .stdin(fs::File::open(&filename).expect("Failed to open screenshot file"))
+        .status()
+        .expect("Failed to execute wl-copy");
+
+    if !wlcopy_status.success() {
+        eprintln!("Failed to copy screenshot to clipboard.");
     }
 }
