@@ -43,7 +43,9 @@ fn main() {
         }
     }
 
-    let grim_status = grim_process.wait().expect("Failed to wait for grim process");
+    let grim_status = grim_process
+        .wait()
+        .expect("Failed to wait for grim process");
     if !grim_status.success() {
         eprintln!("Grim failed to capture screenshot.");
         return;
@@ -61,4 +63,3 @@ fn main() {
         }
     }
 }
-
