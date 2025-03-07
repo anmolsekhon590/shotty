@@ -1,6 +1,6 @@
 use config::{Config, File};
-use std::fs;
 use directories::ProjectDirs;
+use std::fs;
 
 #[derive(Debug, serde::Deserialize)]
 pub struct ShottyConfig {
@@ -33,4 +33,3 @@ clipboard = true
         .try_deserialize()
         .expect("Invalid config format")
 }
-
