@@ -1,0 +1,10 @@
+[package]
+name = "shotty"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+chrono = "0.4"
+config = "0.13"
+directories = "5.0"
+serde = { version = "1.0", features = ["derive"] }
