@@ -13,7 +13,7 @@ struct ShottyConfig {
 }
 
 fn load_config() -> ShottyConfig {
-    let proj_dirs = ProjectDirs::from("com", "yourname", "shotty")
+    let proj_dirs = ProjectDirs::from("com", "anmolsekhon590", "shotty")
         .expect("Could not get project directory");
     let config_path = proj_dirs.config_dir().join("config.toml");
 
