@@ -51,15 +51,13 @@ fn main() {
         return;
     }
 
-    // Save screenshot to disk (if clipboard is disabled)
-    if !config.clipboard {
-        let save_status = Command::new("grim")
-            .args(["-g", selection.trim(), &filename])
-            .status()
-            .expect("Failed to execute grim for saving file");
+    // Save screenshot to disk always
+    let save_status = Command::new("grim")
+        .args(["-g", selection.trim(), &filename])
+        .status()
+        .expect("Failed to execute grim for saving file");
 
-        if !save_status.success() {
-            eprintln!("Failed to save screenshot to file.");
-        }
+    if !save_status.success() {
+        eprintln!("Failed to save screenshot to file.");
     }
 }
