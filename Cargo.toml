@@ -9,3 +9,19 @@ chrono = "0.4"
 config = "0.13"
 directories = "5.0"
 serde = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+criterion = "0.5"
+
+[[bin]]
+name = "shotty"
+path = "src/main.rs"
+
+[lib]
+name = "shotty"
+path = "src/lib.rs"
+
+[[bench]]
+name = "benchmark"
+harness = false
+
