@@ -16,6 +16,10 @@ struct Args {
     /// Take a fullscreen screenshot
     #[clap(long)]
     fullscreen: bool,
+
+    /// Take a screenshot of a specific monitor (e.g., `--output DP-1`)
+    #[clap(long, value_name = "MONITOR_NAME")]
+    output: Option<String>,
 }
 
 fn main() {
@@ -30,6 +34,8 @@ fn main() {
 
     let selection = if args.fullscreen {
         String::from("")
+    } else if let Some(ref monitor_name) = args.output {
+        monitor_name.clone()
     } else {
         let output = Command::new("slurp")
             .output()
@@ -44,7 +50,13 @@ fn main() {
     };
 
     let mut grim_args = vec![];
-    if !args.fullscreen {
+
+    // If no args are passed add the -g option
+    if let Some(output_name) = args.output.as_ref() {
+        // User specified `--output`, so use `-o`
+        grim_args.extend(["-o", output_name]);
+    } else if !args.fullscreen {
+        // If no `--output` and not fullscreen, assume region selection (`-g`)
         grim_args.extend(["-g", selection.trim()]);
     }
 
