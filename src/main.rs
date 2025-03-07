@@ -1,10 +1,25 @@
 use chrono::Local;
+use clap::Parser;
 use shotty::load_config;
 use std::env;
 use std::fs;
 use std::process::{Command, Stdio};
 
+/// Shotty: A simple Wayland screenshot tool
+#[derive(Parser)]
+#[clap(
+    name = "Shotty",
+    version = "0.1.0",
+    about = "A simple Wayland screenshot tool"
+)]
+struct Args {
+    /// Take a fullscreen screenshot
+    #[clap(long)]
+    fullscreen: bool,
+}
+
 fn main() {
+    let args = Args::parse();
     let config = load_config();
     let home_dir = env::var("HOME").expect("Could not get HOME directory");
     let screenshot_dir = config.screenshot_dir.replace("~", &home_dir);
@@ -13,22 +28,29 @@ fn main() {
     let timestamp = Local::now().format(&config.timestamp_format).to_string();
     let filename = format!("{}/screenshot-{}.png", screenshot_dir, timestamp);
 
-    // Get region selection from slurp
-    let selection = Command::new("slurp")
-        .output()
-        .expect("Failed to execute slurp")
-        .stdout;
+    let selection = if args.fullscreen {
+        String::from("")
+    } else {
+        let output = Command::new("slurp")
+            .output()
+            .expect("Failed to execute slurp")
+            .stdout;
+        let region = String::from_utf8_lossy(&output).to_string();
+        if region.trim().is_empty() {
+            eprintln!("No selection made.");
+            return;
+        }
+        region
+    };
 
-    let selection = String::from_utf8_lossy(&selection);
-    if selection.trim().is_empty() {
-        eprintln!("No selection made.");
-        return;
+    let mut grim_args = vec![];
+    if !args.fullscreen {
+        grim_args.extend(["-g", selection.trim()]);
     }
 
-    // Capture screenshot and pipe to wl-copy
     let mut grim_process = Command::new("grim")
-        .args(["-g", selection.trim(), "-"]) // Output to stdout
-        .stdout(Stdio::piped()) // Pipe output
+        .args(&grim_args)
+        .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to execute grim");
 
@@ -41,13 +63,10 @@ fn main() {
         return;
     }
 
-<<<<<<< Updated upstream
-    // Save screenshot to disk always
-=======
     // Capture screenshot and save it
->>>>>>> Stashed changes
     let save_status = Command::new("grim")
-        .args(["-g", selection.trim(), &filename])
+        .args(&grim_args)
+        .arg(&filename)
         .status()
         .expect("Failed to execute grim for saving file");
 
