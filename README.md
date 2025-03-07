@@ -18,7 +18,7 @@ Before building **Shotty**, make sure you have the following dependencies instal
 ## **🔧 Building From Source**
 
 ```
-git clone https://github.com/YOUR_USERNAME/shotty.git
+git clone https://github.com/anmolsekhon590/shotty.git
 cd shotty
 cargo build --release
 ```
@@ -27,7 +27,17 @@ cargo build --release
 
 ## 🚀 Installing Shotty
 
-To install it system-wide:
+### Option 1: Install via Cargo (Recommended)
+If you have Rust installed, you can install Shotty directly using Cargo:
+
+```
+cargo install --git https://github.com/anmolsekhon590/shotty.git
+```
+
+This will install `shotty` to `~/.cargo/bin/`. Ensure it's in your `$PATH`:
+
+### Option 2: Install System-wide
+To install Shotty for all users:
 
 ```
 sudo cp target/release/shotty /usr/local/bin/
