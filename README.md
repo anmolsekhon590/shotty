@@ -33,3 +33,8 @@ To install it system-wide:
 sudo cp target/release/shotty /usr/local/bin/
 ```
 
+## 📜 License
+
+Shotty is licensed under the GNU General Public License v3.0 (GPL-3.0).
+
+See the full license text in the [LICENSE](https://github.com/anmolsekhon590/shotty/blob/main/LICENSE) file.
