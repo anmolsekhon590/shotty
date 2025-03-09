@@ -1,100 +1,15 @@
-use chrono::Local;
 use clap::Parser;
-use shotty::load_config;
-use std::env;
-use std::fs;
-use std::process::{Command, Stdio};
-
-/// Shotty: A simple Wayland screenshot tool
-#[derive(Parser)]
-#[clap(
-    name = "Shotty",
-    version = "0.1.0",
-    about = "A simple Wayland screenshot tool"
-)]
-struct Args {
-    /// Take a fullscreen screenshot
-    #[clap(long)]
-    fullscreen: bool,
-
-    /// Take a screenshot of a specific monitor (e.g., `--output DP-1`)
-    #[clap(long, value_name = "MONITOR_NAME")]
-    output: Option<String>,
-}
+use shotty::commands::args::Args;
+use shotty::commands::clipboard::copy_to_clipboard;
+use shotty::commands::config::load_config;
+use shotty::commands::screenshot::take_screenshot;
 
 fn main() {
     let args = Args::parse();
     let config = load_config();
-    let home_dir = env::var("HOME").expect("Could not get HOME directory");
-    let screenshot_dir = config.screenshot_dir.replace("~", &home_dir);
-    fs::create_dir_all(&screenshot_dir).expect("Failed to create screenshot directory");
 
-    let timestamp = Local::now().format(&config.timestamp_format).to_string();
-    let filename = format!("{}/screenshot-{}.png", screenshot_dir, timestamp);
-
-    let selection = if args.fullscreen {
-        String::from("")
-    } else if let Some(ref monitor_name) = args.output {
-        monitor_name.clone()
-    } else {
-        let output = Command::new("slurp")
-            .output()
-            .expect("Failed to execute slurp")
-            .stdout;
-        let region = String::from_utf8_lossy(&output).to_string();
-        if region.trim().is_empty() {
-            eprintln!("No selection made.");
-            return;
-        }
-        region
-    };
-
-    let mut grim_args = vec![];
-
-    // If no args are passed add the -g option
-    if let Some(output_name) = args.output.as_ref() {
-        // User specified `--output`, so use `-o`
-        grim_args.extend(["-o", output_name]);
-    } else if !args.fullscreen {
-        // If no `--output` and not fullscreen, assume region selection (`-g`)
-        grim_args.extend(["-g", selection.trim()]);
-    }
-
-    let mut grim_process = Command::new("grim")
-        .args(&grim_args)
-        .stdout(Stdio::piped())
-        .spawn()
-        .expect("Failed to execute grim");
-
-    let grim_status = grim_process
-        .wait()
-        .expect("Failed to wait for grim process");
-
-    if !grim_status.success() {
-        eprintln!("Grim failed to capture screenshot.");
-        return;
-    }
-
-    // Capture screenshot and save it
-    let save_status = Command::new("grim")
-        .args(&grim_args)
-        .arg(&filename)
-        .status()
-        .expect("Failed to execute grim for saving file");
-
-    if !save_status.success() {
-        eprintln!("Failed to save screenshot to file.");
-        return;
-    }
-
-    // Copy saved screenshot to clipboard
-    let wlcopy_status = Command::new("wl-copy")
-        .arg("--type=image/png")
-        .stdin(fs::File::open(&filename).expect("Failed to open screenshot file"))
-        .status()
-        .expect("Failed to execute wl-copy");
-
-    if !wlcopy_status.success() {
-        eprintln!("Failed to copy screenshot to clipboard.");
+    let filename = take_screenshot(args.fullscreen, args.output, &config);
+    if !filename.is_empty() {
+        copy_to_clipboard(&filename);
     }
 }
