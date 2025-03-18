@@ -14,11 +14,11 @@ use std::process::{Command, Stdio};
 )]
 struct Args {
     /// Take a fullscreen screenshot
-    #[clap(long)]
+    #[arg(short = 'f', long = "fullscreen")]
     fullscreen: bool,
 
     /// Take a screenshot of a specific monitor (e.g., `--output DP-1`)
-    #[clap(long, value_name = "MONITOR_NAME")]
+    #[arg(short = 'o', long = "output", value_name = "MONITOR_NAME")]
     output: Option<String>,
 }
 
