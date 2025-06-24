@@ -15,4 +15,8 @@ pub struct Args {
     /// Take a screenshot of a specific monitor (e.g., `--output DP-1`)
     #[arg(short = 'o', long = "output", value_name = "MONITOR_NAME")]
     pub output: Option<String>,
+
+    /// Freeze the screen before taking a region screenshot (requires hyprpicker)
+    #[arg(short = 'z', long = "freeze")]
+    pub freeze: bool,
 }

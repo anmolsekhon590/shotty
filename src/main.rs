@@ -8,7 +8,7 @@ fn main() {
     let args = Args::parse();
     let config = load_config();
 
-    let filename = take_screenshot(args.fullscreen, args.output, &config);
+    let filename = take_screenshot(args.fullscreen, args.output, &config, args.freeze);
     if !filename.is_empty() {
         copy_to_clipboard(&filename);
     }
