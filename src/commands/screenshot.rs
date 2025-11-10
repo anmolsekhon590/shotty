@@ -41,10 +41,18 @@ pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &Shotty
     } else if let Some(ref monitor_name) = output {
         monitor_name.clone()
     } else {
-        let output = Command::new("slurp")
-            .output()
-            .expect("Failed to execute slurp")
-            .stdout;
+        let output = match Command::new("slurp").output() {
+            Ok(output) => output.stdout,
+            Err(e) => {
+                // Kill freeze process if slurp fails
+                if let Some(mut child) = freeze_process {
+                    let _ = child.kill();
+                }
+                eprintln!("Failed to execute slurp: {}", e);
+                eprintln!("Make sure slurp is installed and in your PATH.");
+                return "".to_string();
+            }
+        };
         let region = String::from_utf8_lossy(&output).to_string();
         if region.trim().is_empty() {
             // Kill freeze process if selection was cancelled
@@ -65,11 +73,22 @@ pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &Shotty
         grim_args.extend(["-g", selection.trim()]);
     }
 
-    let grim_status = Command::new("grim")
+    let grim_status = match Command::new("grim")
         .args(&grim_args)
         .arg(&filename)
         .status()
-        .expect("Failed to execute grim");
+    {
+        Ok(status) => status,
+        Err(e) => {
+            // End screen freeze
+            if let Some(mut child) = freeze_process {
+                let _ = child.kill();
+            }
+            eprintln!("Failed to execute grim: {}", e);
+            eprintln!("Make sure grim is installed and in your PATH.");
+            return "".to_string();
+        }
+    };
 
     // End screen freeze
     if let Some(mut child) = freeze_process {

@@ -140,17 +140,47 @@ cargo build --release
 ### Option 1: Install via Cargo (Recommended)
 If you have Rust installed, you can install Shotty directly using Cargo:
 
-```
+```bash
 cargo install --git https://github.com/anmolsekhon590/shotty.git
 ```
 
-This will install `shotty` to `~/.cargo/bin/`. Ensure it's in your `$PATH`:
+This will install `shotty` to `~/.cargo/bin/`.
+
+**Important:** Ensure `~/.cargo/bin` is in your `$PATH`. Add this to your shell configuration file (`~/.bashrc`, `~/.zshrc`, or `~/.config/fish/config.fish`):
+
+```bash
+# For bash/zsh
+export PATH="$HOME/.cargo/bin:$PATH"
+
+# For fish
+fish_add_path $HOME/.cargo/bin
+```
+
+Then reload your shell:
+```bash
+source ~/.bashrc  # or source ~/.zshrc, or restart your terminal
+```
 
 ### Option 2: Install System-wide
-To install Shotty for all users:
+To install Shotty for all users (after building from source):
 
-```
+```bash
+# Build the project first
+cargo build --release
+
+# Install to /usr/local/bin (no PATH configuration needed)
 sudo cp target/release/shotty /usr/local/bin/
+```
+
+### Option 3: Install from Local Repository
+If you've cloned the repository and want to install from the local source:
+
+```bash
+# Install directly from the local directory
+cargo install --path .
+
+# Or install to /usr/local/bin
+cargo install --path . --root /usr/local
 ```
 
 ## 📜 License
