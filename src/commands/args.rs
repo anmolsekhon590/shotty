@@ -17,6 +17,6 @@ pub struct Args {
     pub output: Option<String>,
 
     /// Freeze the screen before taking a region screenshot (requires hyprpicker)
-    #[arg(short = 'z', long = "freeze")]
+    #[arg(short = 'z', long = "freeze", default_value_t = true, action = clap::ArgAction::Set)]
     pub freeze: bool,
 }
