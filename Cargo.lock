@@ -936,6 +936,7 @@ dependencies = [
  "config",
  "criterion",
  "directories",
+ "libc",
  "serde",
 ]
 
