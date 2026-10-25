@@ -1,35 +1,44 @@
 use crate::commands::config::ShottyConfig;
 use chrono::Local;
 use std::fs;
+use std::fs::OpenOptions;
+use std::io::{ErrorKind, Write};
 use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
 const LOCK_FILE_PATH: &str = "/tmp/shotty-selection-lock";
 
-/// Check if a selection is already in progress by reading the lock file
-/// and verifying the stored PID is still running
-fn is_selection_in_progress() -> bool {
-    if let Ok(content) = fs::read_to_string(LOCK_FILE_PATH)
-        && let Ok(pid) = content.trim().parse::<u32>()
-    {
-        // Check if process with this PID is still running using kill signal 0
-        // This returns 0 if process exists, ESRCH if it doesn't
-        unsafe {
-            return libc::kill(pid as libc::pid_t, 0) == 0;
+/// Try to atomically acquire the selection lock. Returns true if acquired.
+/// Cleans up a stale lock (dead PID) and retries once.
+fn acquire_selection_lock() -> bool {
+    for _ in 0..2 {
+        match OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(LOCK_FILE_PATH)
+        {
+            Ok(mut file) => {
+                let _ = write!(file, "{}", std::process::id());
+                return true;
+            }
+            Err(e) if e.kind() == ErrorKind::AlreadyExists => {
+                // Lock file exists: check if the owning PID is still alive.
+                if let Ok(content) = fs::read_to_string(LOCK_FILE_PATH)
+                    && let Ok(pid) = content.trim().parse::<u32>()
+                {
+                    let alive = unsafe { libc::kill(pid as libc::pid_t, 0) == 0 };
+                    if alive {
+                        return false;
+                    }
+                }
+                // Stale lock (dead PID or unreadable) - remove and retry.
+                let _ = fs::remove_file(LOCK_FILE_PATH);
+            }
+            Err(_) => return false,
         }
     }
     false
-}
-
-/// Acquire the selection lock, cleaning stale locks if needed
-fn acquire_selection_lock() -> Result<(), String> {
-    // Clean up stale lock if exists (either no file or stale PID)
-    let _ = fs::remove_file(LOCK_FILE_PATH);
-
-    // Write current PID to lock file
-    fs::write(LOCK_FILE_PATH, std::process::id().to_string())
-        .map_err(|e| format!("Failed to create lock file: {}", e))
 }
 
 /// Release the selection lock
@@ -73,16 +82,10 @@ pub fn take_screenshot(
 
     // Check if selection is already in progress (only for region screenshots)
     let needs_selection = !fullscreen && output.is_none();
-    if needs_selection {
-        if is_selection_in_progress() {
-            eprintln!("Screenshot selection is already active.");
-            eprintln!("If this is incorrect, run: rm {}", LOCK_FILE_PATH);
-            return String::new();
-        }
-        if let Err(e) = acquire_selection_lock() {
-            eprintln!("{}", e);
-            return String::new();
-        }
+    if needs_selection && !acquire_selection_lock() {
+        eprintln!("Screenshot selection is already active.");
+        eprintln!("If this is incorrect, run: rm {}", LOCK_FILE_PATH);
+        return String::new();
     }
 
     let timestamp = Local::now().format(&config.timestamp_format).to_string();
