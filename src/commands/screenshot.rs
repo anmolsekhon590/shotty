@@ -3,7 +3,7 @@ use chrono::Local;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::{ErrorKind, Write};
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::thread;
 use std::time::Duration;
 
@@ -44,6 +44,30 @@ fn acquire_selection_lock() -> bool {
 /// Release the selection lock
 fn release_selection_lock() {
     let _ = fs::remove_file(LOCK_FILE_PATH);
+}
+
+/// Gracefully stop the screen-freeze process.
+///
+/// `Child::kill()` sends SIGKILL, which prevents hyprpicker from unlinking the
+/// SHM files it created in `$XDG_RUNTIME_DIR` (`.hyprpicker_*`). Those files then
+/// accumulate until the runtime tmpfs is full, after which touching an unbacked
+/// mapped page raises SIGBUS and takes the compositor down with it. SIGTERM lets
+/// hyprpicker clean up; SIGKILL is only a last resort if it refuses to exit.
+fn stop_freeze(child: &mut Child) {
+    unsafe {
+        libc::kill(child.id() as libc::pid_t, libc::SIGTERM);
+    }
+
+    for _ in 0..50 {
+        match child.try_wait() {
+            Ok(Some(_)) => return,
+            Ok(None) => thread::sleep(Duration::from_millis(10)),
+            Err(_) => break,
+        }
+    }
+
+    let _ = child.kill();
+    let _ = child.wait();
 }
 
 pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &ShottyConfig, freeze: bool) -> String {
@@ -107,7 +131,7 @@ pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &Shotty
             Err(e) => {
                 // Kill freeze process if slurp fails
                 if let Some(mut child) = freeze_process {
-                    let _ = child.kill();
+                    stop_freeze(&mut child);
                 }
                 eprintln!("Failed to execute slurp: {}", e);
                 eprintln!("Make sure slurp is installed and in your PATH.");
@@ -118,7 +142,7 @@ pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &Shotty
         if region.trim().is_empty() {
             // Kill freeze process if selection was cancelled
             if let Some(mut child) = freeze_process {
-                let _ = child.kill();
+                stop_freeze(&mut child);
             }
             eprintln!("No selection made.");
             return cleanup_and_return!("");
@@ -143,7 +167,7 @@ pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &Shotty
         Err(e) => {
             // End screen freeze
             if let Some(mut child) = freeze_process {
-                let _ = child.kill();
+                stop_freeze(&mut child);
             }
             eprintln!("Failed to execute grim: {}", e);
             eprintln!("Make sure grim is installed and in your PATH.");
@@ -153,7 +177,7 @@ pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &Shotty
 
     // End screen freeze
     if let Some(mut child) = freeze_process {
-        let _ = child.kill();
+        stop_freeze(&mut child);
     }
 
     if !grim_status.success() {
