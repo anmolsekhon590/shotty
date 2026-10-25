@@ -2,32 +2,43 @@ use std::env;
 use std::path::PathBuf;
 
 fn main() {
-    // Only show the message when building in release mode or running cargo install
-    let profile = env::var("PROFILE").unwrap_or_default();
+    // Only show the message when building in release mode or running cargo install.
+    if env::var("PROFILE").unwrap_or_default() != "release" {
+        return;
+    }
 
-    // Check if ~/.cargo/bin is in PATH
-    if let Ok(path_var) = env::var("PATH") {
-        let home = env::var("HOME").unwrap_or_default();
-        let cargo_bin = PathBuf::from(&home).join(".cargo/bin");
-        let cargo_bin_str = cargo_bin.to_string_lossy();
+    // Warn if ~/.cargo/bin is not on PATH, since `cargo install` installs there.
+    let Ok(path_var) = env::var("PATH") else {
+        return;
+    };
+    let home = env::var("HOME").unwrap_or_default();
+    let cargo_bin = PathBuf::from(&home).join(".cargo/bin");
+    let cargo_bin_str = cargo_bin.to_string_lossy();
 
-        if !path_var.split(':').any(|p| p == cargo_bin_str || p == "$HOME/.cargo/bin" || p.contains(".cargo/bin")) {
-            if profile == "release" {
-                println!("cargo:warning=");
-                println!("cargo:warning=╭─────────────────────────────────────────────────────────────╮");
-                println!("cargo:warning=│  ⚠️  ~/.cargo/bin is not in your PATH                      │");
-                println!("cargo:warning=│                                                             │");
-                println!("cargo:warning=│  After installation, add this to your shell config:         │");
-                println!("cargo:warning=│                                                             │");
-                println!("cargo:warning=│    export PATH=\"$HOME/.cargo/bin:$PATH\"                    │");
-                println!("cargo:warning=│                                                             │");
-                println!("cargo:warning=│  Then reload: source ~/.bashrc (or restart terminal)        │");
-                println!("cargo:warning=│                                                             │");
-                println!("cargo:warning=│  Or install system-wide:                                    │");
-                println!("cargo:warning=│    sudo cp target/release/shotty /usr/local/bin/           │");
-                println!("cargo:warning=╰─────────────────────────────────────────────────────────────╯");
-                println!("cargo:warning=");
-            }
-        }
+    let cargo_bin_on_path = path_var
+        .split(':')
+        .any(|p| p == cargo_bin_str || p == "$HOME/.cargo/bin" || p.contains(".cargo/bin"));
+
+    if cargo_bin_on_path {
+        return;
+    }
+
+    for line in [
+        "",
+        "╭─────────────────────────────────────────────────────────────╮",
+        "│  ⚠️  ~/.cargo/bin is not in your PATH                      │",
+        "│                                                             │",
+        "│  After installation, add this to your shell config:         │",
+        "│                                                             │",
+        "│    export PATH=\"$HOME/.cargo/bin:$PATH\"                    │",
+        "│                                                             │",
+        "│  Then reload: source ~/.bashrc (or restart terminal)        │",
+        "│                                                             │",
+        "│  Or install system-wide:                                    │",
+        "│    sudo cp target/release/shotty /usr/local/bin/           │",
+        "╰─────────────────────────────────────────────────────────────╯",
+        "",
+    ] {
+        println!("cargo:warning={line}");
     }
 }

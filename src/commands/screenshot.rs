@@ -24,12 +24,12 @@ fn acquire_selection_lock() -> bool {
             }
             Err(e) if e.kind() == ErrorKind::AlreadyExists => {
                 // Lock file exists: check if the owning PID is still alive.
-                if let Ok(content) = fs::read_to_string(LOCK_FILE_PATH) {
-                    if let Ok(pid) = content.trim().parse::<u32>() {
-                        let alive = unsafe { libc::kill(pid as libc::pid_t, 0) == 0 };
-                        if alive {
-                            return false;
-                        }
+                if let Ok(content) = fs::read_to_string(LOCK_FILE_PATH)
+                    && let Ok(pid) = content.trim().parse::<u32>()
+                {
+                    let alive = unsafe { libc::kill(pid as libc::pid_t, 0) == 0 };
+                    if alive {
+                        return false;
                     }
                 }
                 // Stale lock (dead PID or unreadable) - remove and retry.
@@ -70,19 +70,22 @@ fn stop_freeze(child: &mut Child) {
     let _ = child.wait();
 }
 
-pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &ShottyConfig, freeze: bool) -> String {
+pub fn take_screenshot(
+    fullscreen: bool,
+    output: Option<String>,
+    config: &ShottyConfig,
+    freeze: bool,
+) -> String {
     let home_dir = std::env::var("HOME").expect("Could not get HOME directory");
     let screenshot_dir = config.screenshot_dir.replace("~", &home_dir);
     fs::create_dir_all(&screenshot_dir).expect("Failed to create screenshot directory");
 
     // Check if selection is already in progress (only for region screenshots)
     let needs_selection = !fullscreen && output.is_none();
-    if needs_selection {
-        if !acquire_selection_lock() {
-            eprintln!("Screenshot selection is already active.");
-            eprintln!("If this is incorrect, run: rm {}", LOCK_FILE_PATH);
-            return String::new();
-        }
+    if needs_selection && !acquire_selection_lock() {
+        eprintln!("Screenshot selection is already active.");
+        eprintln!("If this is incorrect, run: rm {}", LOCK_FILE_PATH);
+        return String::new();
     }
 
     let timestamp = Local::now().format(&config.timestamp_format).to_string();
@@ -101,10 +104,10 @@ pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &Shotty
     // Start screen freeze if requested and taking a region screenshot
     let freeze_process = if freeze && !fullscreen && output.is_none() {
         match Command::new("hyprpicker")
-            .arg("-r")  // render-inactive flag
-            .arg("-z")  // no-zoom to reduce visual interference
-            .stderr(Stdio::null())  // Suppress error messages like "PBUFFER null"
-            .stdout(Stdio::null())  // Suppress output
+            .arg("-r") // render-inactive flag
+            .arg("-z") // no-zoom to reduce visual interference
+            .stderr(Stdio::null()) // Suppress error messages like "PBUFFER null"
+            .stdout(Stdio::null()) // Suppress output
             .spawn()
         {
             Ok(child) => {
