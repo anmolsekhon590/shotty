@@ -35,7 +35,9 @@ pub fn check_dependencies() -> Result<(), String> {
         error_msg.push_str("  Debian/Ubuntu: sudo apt install grim slurp wl-clipboard-tools\n");
         error_msg.push_str("  Fedora:      sudo dnf install grim slurp wl-clipboard\n");
         error_msg.push_str("  openSUSE:    sudo zypper install grim slurp wl-clipboard\n");
-        error_msg.push_str("  Gentoo:      sudo emerge media-gfx/grim gui-apps/slurp gui-apps/wl-clipboard\n");
+        error_msg.push_str(
+            "  Gentoo:      sudo emerge media-gfx/grim gui-apps/slurp gui-apps/wl-clipboard\n",
+        );
 
         return Err(error_msg);
     }

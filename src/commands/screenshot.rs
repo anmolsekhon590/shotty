@@ -10,13 +10,13 @@ const LOCK_FILE_PATH: &str = "/tmp/shotty-selection-lock";
 /// Check if a selection is already in progress by reading the lock file
 /// and verifying the stored PID is still running
 fn is_selection_in_progress() -> bool {
-    if let Ok(content) = fs::read_to_string(LOCK_FILE_PATH) {
-        if let Ok(pid) = content.trim().parse::<u32>() {
-            // Check if process with this PID is still running using kill signal 0
-            // This returns 0 if process exists, ESRCH if it doesn't
-            unsafe {
-                return libc::kill(pid as libc::pid_t, 0) == 0;
-            }
+    if let Ok(content) = fs::read_to_string(LOCK_FILE_PATH)
+        && let Ok(pid) = content.trim().parse::<u32>()
+    {
+        // Check if process with this PID is still running using kill signal 0
+        // This returns 0 if process exists, ESRCH if it doesn't
+        unsafe {
+            return libc::kill(pid as libc::pid_t, 0) == 0;
         }
     }
     false
@@ -26,7 +26,7 @@ fn is_selection_in_progress() -> bool {
 fn acquire_selection_lock() -> Result<(), String> {
     // Clean up stale lock if exists (either no file or stale PID)
     let _ = fs::remove_file(LOCK_FILE_PATH);
-    
+
     // Write current PID to lock file
     fs::write(LOCK_FILE_PATH, std::process::id().to_string())
         .map_err(|e| format!("Failed to create lock file: {}", e))
@@ -61,7 +61,12 @@ fn stop_freeze(child: &mut Child) {
     let _ = child.wait();
 }
 
-pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &ShottyConfig, freeze: bool) -> String {
+pub fn take_screenshot(
+    fullscreen: bool,
+    output: Option<String>,
+    config: &ShottyConfig,
+    freeze: bool,
+) -> String {
     let home_dir = std::env::var("HOME").expect("Could not get HOME directory");
     let screenshot_dir = config.screenshot_dir.replace("~", &home_dir);
     fs::create_dir_all(&screenshot_dir).expect("Failed to create screenshot directory");
@@ -96,10 +101,10 @@ pub fn take_screenshot(fullscreen: bool, output: Option<String>, config: &Shotty
     // Start screen freeze if requested and taking a region screenshot
     let freeze_process = if freeze && !fullscreen && output.is_none() {
         match Command::new("hyprpicker")
-            .arg("-r")  // render-inactive flag
-            .arg("-z")  // no-zoom to reduce visual interference
-            .stderr(Stdio::null())  // Suppress error messages like "PBUFFER null"
-            .stdout(Stdio::null())  // Suppress output
+            .arg("-r") // render-inactive flag
+            .arg("-z") // no-zoom to reduce visual interference
+            .stderr(Stdio::null()) // Suppress error messages like "PBUFFER null"
+            .stdout(Stdio::null()) // Suppress output
             .spawn()
         {
             Ok(child) => {
